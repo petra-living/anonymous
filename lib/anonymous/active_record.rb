@@ -14,7 +14,7 @@ module Anonymous
   module ActiveRecord
     def anonymize!
       anonymizer = Anonymizer.new(attributes, anonymization_definitions)
-      update_attributes!(anonymizer.anonymized_attributes)
+      update!(anonymizer.anonymized_attributes)
     rescue ::ActiveRecord::RecordNotUnique => e
       @anonymization_attempts ||= 0
       max_retries = Anonymous.configuration.max_anonymize_retries
@@ -26,7 +26,7 @@ module Anonymous
 
     def anonymize
       anonymizer = Anonymizer.new(attributes, anonymization_definitions)
-      update_attributes(anonymizer.anonymized_attributes)
+      update(anonymizer.anonymized_attributes)
     rescue ::ActiveRecord::RecordNotUnique => e
       @anonymization_attempts ||= 0
       max_retries = Anonymous.configuration.max_anonymize_retries
