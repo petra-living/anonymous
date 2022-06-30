@@ -13,30 +13,28 @@ module Anonymous
   # constraint in the database.
   module ActiveRecord
     def anonymize!
-      anonymizer = Anonymizer.new(attributes, anonymization_definitions)
-      update!(anonymizer.anonymized_attributes)
-    rescue ::ActiveRecord::RecordNotUnique => e
-      @anonymization_attempts ||= 0
-      max_retries = Anonymous.configuration.max_anonymize_retries
-      raise e if @anonymization_attempts >= max_retries
-
-      @anonymization_attempts += 1
-      retry
+      do_anonymize(:update!)
     end
 
     def anonymize
-      anonymizer = Anonymizer.new(attributes, anonymization_definitions)
-      update(anonymizer.anonymized_attributes)
-    rescue ::ActiveRecord::RecordNotUnique => e
-      @anonymization_attempts ||= 0
-      max_retries = Anonymous.configuration.max_anonymize_retries
-      raise e if @anonymization_attempts >= max_retries
-
-      @anonymization_attempts += 1
-      retry
+      do_anonymize(:update)
     end
 
     private
+
+    def do_anonymize(updater)
+      ::ActiveRecord::Base.transaction(requires_new: true) do
+        anonymizer = Anonymizer.new(attributes, anonymization_definitions)
+        send(updater, anonymizer.anonymized_attributes)
+      rescue ::ActiveRecord::RecordNotUnique => e
+        @anonymization_attempts ||= 0
+        max_retries = Anonymous.configuration.max_anonymize_retries
+        raise e if @anonymization_attempts >= max_retries
+
+        @anonymization_attempts += 1
+        retry
+      end
+    end
 
     def anonymization_definitions
       message = "Class #{self.class.name} must implement an #anonymization_definitions method to use the Anonymous::ActiveRecord functionality."
